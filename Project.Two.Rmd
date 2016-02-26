@@ -1,0 +1,100 @@
+---
+title: "Project Two"
+author: "Hossein Taghinejad"
+date: "October 26, 2016"
+output: html_document
+---
+
+#Introduction
+
+Fine particulate matter (PM2.5) is an ambient air pollutant for which there is strong evidence that it is harmful to human health. In the United States, the Environmental Protection Agency (EPA) is tasked with setting national ambient air quality standards for fine PM and for tracking the emissions of this pollutant into the atmosphere. Approximatly every 3 years, the EPA releases its database on emissions of PM2.5. This database is known as the National Emissions Inventory (NEI). You can read more information about the NEI at the EPA National Emissions Inventory web site.
+
+For each year and for each type of PM source, the NEI records how many tons of PM2.5 were emitted from that source over the course of the entire year. The data that you will use for this assignment are for 1999, 2002, 2005, and 2008.   
+
+The overall goal of this assignment is to explore the National Emissions Inventory database and see what it say about fine particulate matter pollution in the United states over the 10-year period 1999–2008. 
+
+#Data   
+
+
+The data for this assignment are available from the course web site as a single zip file:
+
+[https://d396qusza40orc.cloudfront.net/exdata%2Fdata%2FNEI_data.zip] [29Mb]     
+
+The zip file contains two files:     
+
+PM2.5 Emissions Data (summarySCC_PM25.rds): This file contains a data frame with all of the PM2.5 emissions data for 1999, 2002, 2005, and 2008. For each year, the table contains number of tons of PM2.5 emitted from a specific type of source for the entire year.    
+
+Source Classification Code Table (Source_Classification_Code.rds): This table provides a mapping from the SCC digit strings in the Emissions table to the actual name of the PM2.5 source. The sources are categorized in a few different ways from more general to more specific and you may choose to explore whatever categories you think are most useful. For example, source “10100101” is known as “Ext Comb /Electric Gen /Anthracite Coal /Pulverized Coal”.    
+
+## Question One   
+
+Have total emissions from PM2.5 decreased in the United States from 1999 to 2008? To answer this question we are going to use base plotting system to make a plot showing the total PM2.5 emission from all sources for each of the years 1999, 2002, 2005, and 2008.   
+
+```{r}
+#I assumed that the main directory contains the files needed for this project
+main<- readRDS("summarySCC_PM25.rds")
+SCC <- readRDS("Source_Classification_Code.rds")
+plot1=xtabs(main$Emissions~as.factor(main$year),data=main)
+plot(plot1,type="l",xlab="Year",ylab = "Total Emissions")
+```
+##Question Two   
+
+Have total emissions from PM2.5 decreased in the Baltimore City, Maryland (fips == 24510) from 1999 to 2008?
+
+```{r}
+#Subset the main file by Baltimore
+Bal=main[main$fips=="24510",]
+#Ploting the result
+plot2=xtabs(Bal$Emissions~as.factor(Bal$year),data=main)
+plot(plot2,type="l",xlab="Year",ylab = "Total Emissions( Baltimore)")
+```
+
+##Question Three
+
+Of the four types of sources indicated by the type (point, nonpoint, onroad, nonroad) variable, which of these four sources have seen decreases in emissions from 1999–2008 for Baltimore City? Which have seen increases in emissions from 1999–2008? We use the ggplot2 plotting system to make a plot answering this question.
+
+```{r}
+plot3=xtabs(Bal$Emissions~as.factor(Bal$year)+Bal$type,data=Bal)
+plot3= as.data.frame(plot3)
+library(ggplot2)
+g=ggplot(plot3,aes(as.integer(as.factor.Bal.year.),Freq))
+g + geom_line(aes(color=Bal.type)) + facet_grid(. ~ Bal.type) +labs(x="Year",y="Total Emission( Baltimore)")+scale_x_continuous(labels=c("1999","2002","2005","2008"))+theme(axis.text.x=element_text(angle=90))
+```
+
+##Question Four   
+
+Across the United States, how have emissions from coal combustion-related sources changed from 1999–2008?
+
+```{r}
+coal=SCC[grep("Coal",as.character(SCC$EI.Sector)),]
+coal.Emission=main[main$SCC%in%coal$SCC,]
+plot4=xtabs(coal.Emission$Emissions~as.factor(coal.Emission$year),data=coal.Emission)
+plot(plot4,type="l",xlab="Year",ylab = "Coal Emissions")
+```
+
+##Question Five   
+
+How have emissions from motor vehicle sources changed from 1999–2008 in Baltimore City?
+
+```{r}
+Bal=main[main$fips=="24510",]
+motor=SCC[SCC$Data.Category=="Onroad",]
+Motor.Bal=Bal[Bal$SCC%in%motor$SCC,]
+plot5=xtabs(Motor.Bal$Emissions~as.factor(Motor.Bal$year),data=Motor.Bal)
+plot(plot5,type="l",xlab="Year",ylab = "Motor Vehicle Emissions")
+```
+
+##Question Six  
+
+Compare emissions from motor vehicle sources in Baltimore City with emissions from motor vehicle sources in Los Angeles County, California (fips == 06037). Which city has seen greater changes over time in motor vehicle emissions?
+
+```{r}
+Bal=main[main$fips=="24510",]
+Bal.Cal=main[main$fips=="24510"|main$fips=="06037",]
+motor=SCC[SCC$Data.Category=="Onroad",]
+Motor.Bal.Cal=Bal.Cal[Bal.Cal$SCC%in%motor$SCC,]
+plot6=as.data.frame(xtabs(Motor.Bal.Cal$Emissions~as.factor(Motor.Bal.Cal$year)+Motor.Bal.Cal$fips,data=Motor.Bal.Cal))
+library(ggplot2)
+g=ggplot(plot6,aes(as.integer(as.factor(as.factor.Motor.Bal.Cal.year.)),Freq))
+g + geom_line(aes(color=Motor.Bal.Cal.fips)) + facet_grid(. ~ Motor.Bal.Cal.fips) +labs(x="Year",y="Vehicle Emmision")+scale_x_continuous(labels=c("1999","2002","2005","2008"))+theme(axis.text.x=element_text(angle=90))
+```
